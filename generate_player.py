@@ -195,12 +195,17 @@ def make_player(player_id: int, seed: int, faker: Faker) -> tuple:
     weight = int(clamp((height - 100) + rng.gauss(0, 5), 55, 105))
     preferred_foot = rng.choices(["R", "L", "B"], [70, 24, 6])[0]
 
+    # Résistance aux blessures : constitution + force physique, un peu moins avec l'âge
+    injury_resistance = int(clamp(rng.gauss(60, 14) + (stats["strength"] - 50) * 0.15
+                                  - max(0, age - 30) * 2.0, 10, 99))
+
     return (
         player_id, person.first_name, person.last_name, birth_date.isoformat(), age,
         person.country, person.city,
         height, weight, preferred_foot, int(potential), ratings[best_position], best_position,
         ratings["gk"], ratings["def"], ratings["mid"], ratings["att"],
         *(stats[stat] for stat in STATS),
+        injury_resistance, None, None,          # résistance, numéro de maillot (rempli en jeu), surnom (gagné en jeu)
     )
 
 
@@ -216,6 +221,7 @@ COLUMNS = (
      ("potential", "INTEGER"), ("overall", "REAL"), ("best_position", "TEXT"),
      ("ovr_gk", "REAL"), ("ovr_def", "REAL"), ("ovr_mid", "REAL"), ("ovr_att", "REAL")]
     + [(stat, "INTEGER") for stat in STATS]
+    + [("injury_resistance", "INTEGER"), ("shirt", "INTEGER"), ("nickname", "TEXT")]
 )
 INDEXED_COLUMNS = ["overall", "best_position", "country", "age", "team_id"]
 
@@ -256,7 +262,7 @@ def build_database(path: str, count: int, seed: int, batch_size: int = 50_000) -
 # =============================================================================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Génère une base SQLite de joueurs de foot.")
-    parser.add_argument("-n", "--count", type=int, default=100_000, help="nombre de joueurs")
+    parser.add_argument("-n", "--count", type=int, default=1_000_000, help="nombre de joueurs")
     parser.add_argument("-o", "--output", default="players.db", help="fichier SQLite de sortie")
     parser.add_argument("--seed", type=int, default=42, help="graine de reproductibilité")
     args = parser.parse_args()
